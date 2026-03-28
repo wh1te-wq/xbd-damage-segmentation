@@ -1,0 +1,49 @@
+data:
+  data_root: "D:/IRDR0047/geotiffs"      # raw xBD GeoTIFF root
+  dataset_dir: "D:/IRDR0047/dataset"     # output of preprocess.py
+  tiers: ["tier1", "tier3"]              # splits used for train+val
+  val_ratio: 0.1                         # fraction of events held out for val
+  norm_sample_size: 500                  # images sampled per phase for global stats
+
+model:
+  num_classes: 5
+  in_channels: 6          # 6 = pre+post concatenated  |  3 = post only
+  pretrained_backbone: true
+
+training:
+  img_size: 512
+  epochs: 50
+  batch_size: 8
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  workers: 4
+  use_class_weights: true   # inverse-frequency weighting for class imbalance
+  grad_clip: 1.0            # max gradient norm (0 = disabled)
+  seed: 42
+  checkpoint_dir: "D:/IRDR0047/weights"
+  log_dir: "D:/IRDR0047/logs"
+
+loss:
+  ce_weight: 1.0
+  dice_weight: 0.5
+  focal_weight: 0.5
+  focal_gamma: 2.0
+
+augmentation:
+  p_hflip: 0.5
+  p_vflip: 0.5
+  p_rotate90: 0.5
+  p_color: 0.5        # probability of applying color jitter per image
+  p_noise: 0.3
+  brightness_limit: 0.2
+  contrast_limit: 0.2
+  hue_shift_limit: 10
+  sat_shift_limit: 20
+  noise_std: 0.03
+
+inference:
+  checkpoint: "D:/IRDR0047/weights/best.pth"
+  img_size: 512
+  out_dir: "D:/IRDR0047/predictions"
+  # damage_thresholds: tiered per-class confidence cutoffs (1st-place technique)
+  damage_thresholds: [0.38, 0.13, 0.14, 0.14]  # classes 1-4

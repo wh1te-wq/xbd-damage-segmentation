@@ -1,0 +1,34 @@
+# Dataset and outputs (too large for git)
+data/
+dataset/
+weights/*.pth
+predictions/
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.env
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Keep placeholder files
+!data/.gitkeep
+!weights/.gitkeep
+!predictions/.gitkeep
