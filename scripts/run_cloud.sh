@@ -11,12 +11,12 @@
 
 set -e
 
-HF_TOKEN="${1:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO>}"
-HF_REPO="${2:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO>}"
+HF_TOKEN="${1:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO> [DATASET_DIR]}"
+HF_REPO="${2:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO> [DATASET_DIR]}"
 
-# Paths relative to the repo root (where this script is run from)
+# Paths — third arg overrides dataset location (useful when dataset is outside the repo)
 ROOT="$(pwd)"
-DATASET_DIR="${ROOT}/dataset"
+DATASET_DIR="${3:-${ROOT}/dataset}"
 WEIGHTS_S1="${ROOT}/weights/stage1"
 WEIGHTS_S2="${ROOT}/weights/stage2"
 
