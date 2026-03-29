@@ -2,34 +2,50 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Two-stage training on vast.ai
 #
-# Usage (paste into vast.ai terminal after setup):
+# Usage:
 #   bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO>
 #
 # Example:
 #   bash scripts/run_cloud.sh hf_xxxx wh1te-wq/xbd-damage-segmentation
-#
-# What this does:
-#   1. Train Stage 1 (binary building segmentation, 40 epochs)
-#   2. Train Stage 2 (damage classification, 60 epochs)
-#   3. Upload weights + logs to HuggingFace
-#   4. Shut down the instance  (stops billing automatically)
 # ─────────────────────────────────────────────────────────────────────────────
 
-set -e   # stop immediately if any command fails
+set -e
 
-HF_TOKEN="${1:?Usage: bash run_cloud.sh <HF_TOKEN> <HF_REPO>}"
-HF_REPO="${2:?Usage: bash run_cloud.sh <HF_TOKEN> <HF_REPO>}"
+HF_TOKEN="${1:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO>}"
+HF_REPO="${2:?Usage: bash scripts/run_cloud.sh <HF_TOKEN> <HF_REPO>}"
+
+# Paths relative to the repo root (where this script is run from)
+ROOT="$(pwd)"
+DATASET_DIR="${ROOT}/dataset"
+WEIGHTS_S1="${ROOT}/weights/stage1"
+WEIGHTS_S2="${ROOT}/weights/stage2"
+
+echo "Root        : ${ROOT}"
+echo "Dataset     : ${DATASET_DIR}"
+echo "HF repo     : ${HF_REPO}"
+echo ""
+
+# Verify dataset exists
+if [ ! -d "${DATASET_DIR}/train/post" ]; then
+    echo "ERROR: dataset not found at ${DATASET_DIR}/train/post"
+    echo "Make sure you extracted dataset.tar first:  tar -xf dataset.tar"
+    exit 1
+fi
 
 echo "======================================================"
 echo "  Stage 1: binary building segmentation"
 echo "======================================================"
-python -u scripts/train_stage1.py
+python -u scripts/train_stage1.py \
+    --dataset_dir    "${DATASET_DIR}" \
+    --checkpoint_dir "${WEIGHTS_S1}"
 
 echo ""
 echo "======================================================"
 echo "  Stage 2: damage classification"
 echo "======================================================"
-python -u scripts/train_stage2.py
+python -u scripts/train_stage2.py \
+    --dataset_dir    "${DATASET_DIR}" \
+    --checkpoint_dir "${WEIGHTS_S2}"
 
 echo ""
 echo "======================================================"
@@ -60,15 +76,15 @@ def upload_dir(local_dir, remote_dir):
             repo_type       = "model",
         )
 
-upload_dir("weights/stage1", "weights/stage1")
-upload_dir("weights/stage2", "weights/stage2")
+upload_dir("${WEIGHTS_S1}", "weights/stage1")
+upload_dir("${WEIGHTS_S2}", "weights/stage2")
 print("Upload complete.")
 PYEOF
 
 echo ""
 echo "======================================================"
 echo "  All done. Shutting down instance in 30 seconds..."
-echo "  (Press Ctrl-C to cancel shutdown)"
+echo "  (Press Ctrl-C to cancel)"
 echo "======================================================"
 sleep 30
 sudo shutdown -h now

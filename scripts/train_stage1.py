@@ -97,12 +97,14 @@ def main(cfg: dict) -> None:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train Stage 1 (binary building segmentation)")
-    p.add_argument("--config",     default="configs/stage1.yaml")
-    p.add_argument("--epochs",     type=int,   default=None)
-    p.add_argument("--batch_size", type=int,   default=None)
-    p.add_argument("--lr",         type=float, default=None)
-    p.add_argument("--resume",     default=None, help="Path to checkpoint")
-    p.add_argument("--seed",       type=int,   default=None)
+    p.add_argument("--config",          default="configs/stage1.yaml")
+    p.add_argument("--epochs",          type=int,   default=None)
+    p.add_argument("--batch_size",      type=int,   default=None)
+    p.add_argument("--lr",              type=float, default=None)
+    p.add_argument("--resume",          default=None, help="Path to checkpoint")
+    p.add_argument("--seed",            type=int,   default=None)
+    p.add_argument("--dataset_dir",     default=None, help="Override cfg dataset_dir path")
+    p.add_argument("--checkpoint_dir",  default=None, help="Override cfg checkpoint_dir path")
     return p.parse_args()
 
 
@@ -112,10 +114,12 @@ if __name__ == "__main__":
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
 
-    if args.epochs     is not None: cfg["training"]["epochs"]     = args.epochs
-    if args.batch_size is not None: cfg["training"]["batch_size"] = args.batch_size
-    if args.lr         is not None: cfg["training"]["lr"]         = args.lr
-    if args.resume     is not None: cfg["training"]["resume"]     = args.resume
-    if args.seed       is not None: cfg["training"]["seed"]       = args.seed
+    if args.epochs         is not None: cfg["training"]["epochs"]         = args.epochs
+    if args.batch_size     is not None: cfg["training"]["batch_size"]     = args.batch_size
+    if args.lr             is not None: cfg["training"]["lr"]             = args.lr
+    if args.resume         is not None: cfg["training"]["resume"]         = args.resume
+    if args.seed           is not None: cfg["training"]["seed"]           = args.seed
+    if args.dataset_dir    is not None: cfg["data"]["dataset_dir"]        = args.dataset_dir
+    if args.checkpoint_dir is not None: cfg["training"]["checkpoint_dir"] = args.checkpoint_dir
 
     main(cfg)
