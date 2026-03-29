@@ -1,0 +1,53 @@
+## Stage 2 — Damage classification
+## Task: for each building pixel, classify into 4 damage levels
+##   0=no-damage  1=minor  2=major  3=destroyed
+## Background pixels are ignored (loss mask = 255)
+## Backbone: DeepLabV3+ MobileNetV2
+
+data:
+  data_root: "D:/IRDR0047/geotiffs"
+  dataset_dir: "D:/IRDR0047/dataset"
+
+model:
+  num_classes: 4
+  in_channels: 6              # pre+post concatenated
+  pretrained_backbone: true
+
+training:
+  img_size: 512
+  epochs: 60
+  batch_size: 8
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  workers: 4
+  use_class_weights: false
+  # [no-damage, minor, major, destroyed]
+  # Heavily penalise missing minor/major; background is ignored so no bg weight needed
+  manual_class_weights: [1.0, 12.0, 12.0, 4.0]
+  oversample_damage: 15       # minor/major tiles 15× more likely sampled
+  grad_clip: 1.0
+  seed: 42
+  checkpoint_dir: "D:/IRDR0047/weights/stage2"
+  log_dir: "D:/IRDR0047/logs/stage2"
+
+loss:
+  ce_weight: 1.0
+  dice_weight: 1.5            # Dice directly maximises overlap of rare classes
+  focal_weight: 1.5
+  focal_gamma: 4.0            # Aggressive focus on misclassified minor/major pixels
+
+augmentation:
+  p_hflip: 0.5
+  p_vflip: 0.5
+  p_rotate90: 0.5
+  p_color: 0.5
+  p_noise: 0.3
+  brightness_limit: 0.2
+  contrast_limit: 0.2
+  hue_shift_limit: 10
+  sat_shift_limit: 20
+  noise_std: 0.03
+
+inference:
+  checkpoint: "D:/IRDR0047/weights/stage2/best.pth"
+  img_size: 512

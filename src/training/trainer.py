@@ -23,7 +23,7 @@ from tqdm import tqdm
 from src.training.metrics import SegmentationMetrics
 
 
-_CLASS_NAMES = ["background", "no-damage", "minor-damage", "major-damage", "destroyed"]
+_DEFAULT_CLASS_NAMES = ["background", "no-damage", "minor-damage", "major-damage", "destroyed"]
 
 
 class Trainer:
@@ -32,12 +32,13 @@ class Trainer:
 
     Parameters
     ----------
-    model     : nn.Module
-    criterion : nn.Module        — loss function (e.g. ComboLoss)
-    optimizer : torch.optim.Optimizer
-    scheduler : torch.optim.lr_scheduler._LRScheduler
-    device    : torch.device
-    cfg       : dict             — full config dictionary
+    model       : nn.Module
+    criterion   : nn.Module        — loss function (e.g. ComboLoss)
+    optimizer   : torch.optim.Optimizer
+    scheduler   : torch.optim.lr_scheduler._LRScheduler
+    device      : torch.device
+    cfg         : dict             — full config dictionary
+    class_names : list[str] or None — override default class names for logging
     """
 
     def __init__(
@@ -48,6 +49,7 @@ class Trainer:
         scheduler,
         device:    torch.device,
         cfg:       dict,
+        class_names: list[str] | None = None,
     ):
         self.model     = model
         self.criterion = criterion
@@ -56,12 +58,18 @@ class Trainer:
         self.device    = device
         self.cfg       = cfg
 
-        self.num_classes   = cfg["model"]["num_classes"]
-        self.grad_clip     = float(cfg["training"].get("grad_clip", 0.0))
+        self.num_classes    = cfg["model"]["num_classes"]
+        self.grad_clip      = float(cfg["training"].get("grad_clip", 0.0))
         self.checkpoint_dir = cfg["training"].get("checkpoint_dir", "weights")
         os.makedirs(self.checkpoint_dir, exist_ok=True)
 
-        self._scaler   = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
+        # Class names used for CSV logging and metric display
+        if class_names is not None:
+            self._class_names = class_names
+        else:
+            self._class_names = _DEFAULT_CLASS_NAMES[:self.num_classes]
+
+        self._scaler    = torch.amp.GradScaler("cuda", enabled=(device.type == "cuda"))
         self._best_miou = 0.0
         self._log_path  = os.path.join(self.checkpoint_dir, "train_log.csv")
 
@@ -133,7 +141,7 @@ class Trainer:
     def _eval_epoch(self, loader: DataLoader) -> tuple[float, SegmentationMetrics]:
         self.model.eval()
         total_loss = 0.0
-        metrics    = SegmentationMetrics(self.num_classes, class_names=_CLASS_NAMES)
+        metrics    = SegmentationMetrics(self.num_classes, class_names=self._class_names)
 
         for imgs, masks in tqdm(loader, desc="  val  ", leave=False):
             imgs  = imgs.to(self.device)
@@ -200,7 +208,7 @@ class Trainer:
             with open(self._log_path, "w", newline="") as f:
                 writer = csv.writer(f)
                 header = ["epoch", "train_loss", "val_loss", "pix_acc", "miou", "mean_f1"]
-                header += [f"iou_{c}" for c in _CLASS_NAMES]
+                header += [f"iou_{c}" for c in self._class_names]
                 writer.writerow(header)
 
     def _log_epoch(
@@ -211,7 +219,7 @@ class Trainer:
         metrics:    SegmentationMetrics,
     ) -> None:
         s   = metrics.summary()
-        iou = [s["iou"][c] for c in _CLASS_NAMES]
+        iou = [s["iou"][c] for c in self._class_names]
         row = [epoch, f"{train_loss:.6f}", f"{val_loss:.6f}",
                f"{s['pix_acc']:.6f}", f"{s['miou']:.6f}", f"{s['mean_f1']:.6f}"]
         row += ["nan" if v != v else f"{v:.6f}" for v in iou]
