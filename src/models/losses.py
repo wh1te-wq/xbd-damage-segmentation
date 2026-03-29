@@ -184,13 +184,16 @@ def build_criterion(
     """
     Build the loss function from a config dict.
 
+    Class weight priority
+    ---------------------
+    1. ``cfg["training"]["manual_class_weights"]`` — explicit list, used as-is.
+    2. Inverse-frequency estimation from dataset (if ``use_class_weights=True``).
+    3. No weighting.
+
     Parameters
     ----------
     cfg     : dict  — full config dictionary.
     dataset : XBDDataset or None
-        Training dataset used for class weight estimation.
-        If ``None`` or ``cfg["training"]["use_class_weights"]`` is False,
-        no class weighting is applied.
     device  : torch.device
 
     Returns
@@ -198,10 +201,17 @@ def build_criterion(
     ComboLoss instance.
     """
     class_weights = None
-    if dataset is not None and cfg["training"].get("use_class_weights", True):
+
+    manual = cfg["training"].get("manual_class_weights")
+    if manual:
+        # Explicit weights from config: [bg, no-damage, minor, major, destroyed]
+        class_weights = torch.tensor(manual, dtype=torch.float32).to(device)
+        print(f"  Using manual class weights: {manual}")
+    elif dataset is not None and cfg["training"].get("use_class_weights", True):
         class_weights = compute_class_weights(
             dataset, cfg["model"]["num_classes"]
         ).to(device)
+        print(f"  Using auto class weights: {class_weights.cpu().numpy().round(3).tolist()}")
 
     return ComboLoss(
         num_classes   = cfg["model"]["num_classes"],

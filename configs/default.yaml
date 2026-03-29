@@ -12,22 +12,28 @@ model:
 
 training:
   img_size: 512
-  epochs: 50
+  epochs: 60
   batch_size: 8
   lr: 1.0e-4
   weight_decay: 1.0e-4
   workers: 4
-  use_class_weights: true   # inverse-frequency weighting for class imbalance
-  grad_clip: 1.0            # max gradient norm (0 = disabled)
+  use_class_weights: true
+  # Manual class weights: bg=0.05, no-damage=1.0, minor=8.0, major=8.0, destroyed=4.0
+  # Heavily penalise missing minor/major damage; suppress background dominance
+  manual_class_weights: [0.05, 1.0, 8.0, 8.0, 4.0]
+  # Oversample tiles containing minor/major damage during training
+  # minor/major tiles get weight=oversample_damage, destroyed=3x, others=1x
+  oversample_damage: 10
+  grad_clip: 1.0
   seed: 42
   checkpoint_dir: "D:/IRDR0047/weights"
   log_dir: "D:/IRDR0047/logs"
 
 loss:
   ce_weight: 1.0
-  dice_weight: 0.5
-  focal_weight: 0.5
-  focal_gamma: 2.0
+  dice_weight: 1.0    # increased: directly optimises overlap for rare classes
+  focal_weight: 1.0   # increased: focus on hard minority pixels
+  focal_gamma: 3.0    # increased: stronger focus on misclassified minor/major
 
 augmentation:
   p_hflip: 0.5
